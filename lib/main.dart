@@ -75,9 +75,26 @@ class _AttendanceHomeScreenState extends State<AttendanceHomeScreen> {
     await _saveData();
   }
 
+  // 全データ一括削除
+  Future<void> _clearAllData() async {
+    setState(() {
+      _attendanceList.clear();
+    });
+    await _saveData();
+  }
+
+  // タップで出席・欠席を切り替える機能
+  Future<void> _toggleStatus(int index) async {
+    setState(() {
+      final currentStatus = _attendanceList[index]['status'];
+      _attendanceList[index]['status'] = (currentStatus == '出席') ? '欠席' : '出席';
+    });
+    await _saveData();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ★追加：出席と欠席の回数を自動で数える集計ロジック
+    // 集計ロジック
     int presentCount = 0;
     int absentCount = 0;
     for (var item in _attendanceList) {
@@ -88,16 +105,48 @@ class _AttendanceHomeScreenState extends State<AttendanceHomeScreen> {
       }
     }
 
+    int totalCount = presentCount + absentCount;
+    int attendanceRate = totalCount > 0 ? ((presentCount / totalCount) * 100).round() : 0;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('出席チェッカー'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          // 全データ削除ボタン
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: 'すべて削除',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('確認'),
+                  content: const Text('すべてのデータを削除してもよろしいですか？'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('キャンセル'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _clearAllData();
+                        Navigator.pop(context);
+                      },
+                      child: const Text('削除する', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // ★追加：出席・欠席の集計を表示するカード
+                // 集計＆出席率カード
                 Container(
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.all(16),
@@ -106,22 +155,34 @@ class _AttendanceHomeScreenState extends State<AttendanceHomeScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.blue.withOpacity(0.3)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  child: Column(
                     children: [
-                      Column(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          const Text('出席回数', style: TextStyle(color: Colors.grey, fontSize: 14)),
-                          const SizedBox(height: 4),
-                          Text('$presentCount 回', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
-                        ],
-                      ),
-                      Container(height: 30, width: 1, color: Colors.grey[300]),
-                      Column(
-                        children: [
-                          const Text('欠席回数', style: TextStyle(color: Colors.grey, fontSize: 14)),
-                          const SizedBox(height: 4),
-                          Text('$absentCount 回', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+                          Column(
+                            children: [
+                              const Text('出席回数', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                              const SizedBox(height: 4),
+                              Text('$presentCount 回', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                            ],
+                          ),
+                          Container(height: 30, width: 1, color: Colors.grey[300]),
+                          Column(
+                            children: [
+                              const Text('欠席回数', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                              const SizedBox(height: 4),
+                              Text('$absentCount 回', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+                            ],
+                          ),
+                          Container(height: 30, width: 1, color: Colors.grey[300]),
+                          Column(
+                            children: [
+                              const Text('出席率', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                              const SizedBox(height: 4),
+                              Text('$attendanceRate %', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
+                            ],
+                          ),
                         ],
                       ),
                     ],
@@ -142,12 +203,17 @@ class _AttendanceHomeScreenState extends State<AttendanceHomeScreen> {
                             final item = _attendanceList[index];
                             final isPresent = item['status'] == '出席';
                             return Card(
+                              elevation: 2,
                               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                               child: ListTile(
+                                leading: const Icon(Icons.book, color: Colors.blue),
                                 title: Text(
                                   item['title']!,
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
+                                subtitle: const Text('タップしてステータス切替', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                // タップで切り替えられるようにする
+                                onTap: () => _toggleStatus(index),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
