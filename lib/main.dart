@@ -31,7 +31,6 @@ class AttendanceHomeScreen extends StatefulWidget {
 }
 
 class _AttendanceHomeScreenState extends State<AttendanceHomeScreen> {
-  // 型を省略して自動推論させます
   List _attendanceList = [];
   bool _isLoading = true;
 
@@ -72,6 +71,14 @@ class _AttendanceHomeScreenState extends State<AttendanceHomeScreen> {
     await prefs.setString('attendance_list', jsonString);
   }
 
+  // データを削除する処理
+  Future<void> _deleteData(int index) async {
+    setState(() {
+      _attendanceList.removeAt(index);
+    });
+    await _saveData(); // 削除した状態を保存
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,9 +107,20 @@ class _AttendanceHomeScreenState extends State<AttendanceHomeScreen> {
                           item['title']!,
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        trailing: Chip(
-                          label: Text(item['status']!),
-                          backgroundColor: isPresent ? Colors.green[100] : Colors.red[100],
+                        // チップと削除ボタンを並べる
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Chip(
+                              label: Text(item['status']!),
+                              backgroundColor: isPresent ? Colors.green[100] : Colors.red[100],
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.grey),
+                              onPressed: () => _deleteData(index),
+                            ),
+                          ],
                         ),
                       ),
                     );
